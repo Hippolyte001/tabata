@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="fr-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Tabata</title>
+<link rel="icon" type="image/png" href="icone-180.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tabata">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#17181a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen app. Setup = list of interval rows with big steppers; Run = full-bleed phase color with a giant countdown. Deliberately dark-only, like a gym timer. */
+:root {
+  --bg: #17181a;
+  --surface: #222326;
+  --line: #2f3034;
+  --fg: #f4f4f2;
+  --muted: #8d8f94;
+  --prep: #f5e63c;
+  --work: #8ff04a;
+  --rest: #f0473a;
+  --round: #3ea6ec;
+  --cycle: #f5e63c;
+  --ink: #111214;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+
+/* ---------- Setup ---------- */
+#setup {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+  max-width: 560px;
+  margin: 0 auto;
+  gap: 18px;
+}
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 2.4rem;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.total { text-align: right; font-family: var(--display); text-transform: uppercase; color: var(--muted); font-size: .95rem; letter-spacing: .06em; }
+.total b { display: block; color: var(--fg); font-size: 1.9rem; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+
+.list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.label { min-width: 0; }
+.name {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--display); font-weight: 600; text-transform: uppercase;
+  font-size: 1.45rem; letter-spacing: .02em; line-height: 1.1;
+}
+.dot { width: 16px; height: 16px; border-radius: 50%; flex: none; }
+.sub { margin-top: 2px; padding-left: 26px; color: var(--muted); font-size: .88rem; line-height: 1.3; }
+.ctrl { display: flex; align-items: center; gap: 6px; }
+.step {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--line);
+  font-family: var(--display); font-size: 1.7rem; font-weight: 600; line-height: 1;
+  display: grid; place-items: center;
+  touch-action: manipulation;
+}
+.step:active { background: var(--line); }
+.val {
+  min-width: 3.3ch; text-align: center;
+  font-family: var(--display); font-weight: 700; font-size: 2.6rem; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.opts { display: flex; gap: 10px; flex-wrap: wrap; }
+.chip {
+  flex: 1 1 0; min-width: 120px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
+  font-family: var(--display); text-transform: uppercase; letter-spacing: .05em; font-size: 1.05rem;
+}
+.chip .sw { width: 38px; height: 22px; border-radius: 11px; background: var(--line); position: relative; transition: background .15s; flex: none; }
+.chip .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.chip[aria-pressed="true"] .sw { background: var(--work); }
+.chip[aria-pressed="true"] .sw::after { transform: translateX(16px); background: var(--ink); }
+
+.go {
+  margin-top: auto;
+  width: 100%; padding: 18px; border-radius: 999px;
+  background: var(--work); color: var(--ink);
+  font-family: var(--display); font-weight: 700; font-size: 1.9rem; letter-spacing: .08em; text-transform: uppercase;
+}
+.go:active { filter: brightness(.9); }
+.hint { color: var(--muted); font-size: .82rem; line-height: 1.45; text-align: center; margin: 0; }
+
+/* ---------- Run ---------- */
+#run {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--phase, var(--prep));
+  color: var(--ink);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  transition: background-color .25s;
+}
+#run.paused { --phase: #c9cbcf !important; }
+.meta { display: flex; justify-content: space-between; gap: 12px; font-family: var(--display); text-transform: uppercase; font-weight: 600; }
+.meta div { display: flex; flex-direction: column; font-size: .95rem; letter-spacing: .08em; opacity: .8; }
+.meta b { font-size: 2.1rem; letter-spacing: .01em; opacity: 1; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.meta .r { text-align: right; }
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; }
+#phaseName { font-family: var(--display); font-weight: 700; text-transform: uppercase; font-size: clamp(2.4rem, 11vw, 4.5rem); letter-spacing: .04em; line-height: 1; }
+#count {
+  font-family: var(--display); font-weight: 700;
+  font-size: min(48vw, 38vh); line-height: .9;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+#next { font-family: var(--display); text-transform: uppercase; letter-spacing: .08em; font-size: 1.15rem; opacity: .75; min-height: 1.4em; text-align: center; }
+.bar { height: 8px; border-radius: 4px; background: rgba(0,0,0,.18); overflow: hidden; margin-bottom: 18px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--ink); }
+.btns { display: flex; justify-content: center; align-items: center; gap: 22px; }
+.rb {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(0,0,0,.14); display: grid; place-items: center;
+  touch-action: manipulation;
+}
+.rb.big { width: 92px; height: 92px; background: var(--ink); color: var(--fg); }
+.rb svg { width: 28px; height: 28px; fill: currentColor; }
+.rb.big svg { width: 40px; height: 40px; }
+.rb:active { transform: scale(.95); }
+
+#done .center { gap: 10px; }
+#doneTime { font-family: var(--display); font-weight: 700; font-size: 5rem; line-height: 1; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) { #run { transition: none; } .chip .sw, .chip .sw::after { transition: none; } }
+</style>
+</head>
+<body>
+<section id="setup" aria-label="Réglages">
+  <div class="top">
+    <h1>Tabata</h1>
+    <div class="total">Durée totale<b id="total">3:35</b></div>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="opts">
+    <button class="chip" id="optSound" aria-pressed="true"><span>Bips</span><span class="sw"></span></button>
+    <button class="chip" id="optVoice" aria-pressed="false"><span>Voix</span><span class="sw"></span></button>
+  </div>
+
+  <button class="go" id="start">Démarrer</button>
+  <p class="hint">Réglages gardés sur ce téléphone. Mets le son du téléphone (pas en silencieux) pour entendre les bips. L’écran reste allumé pendant la séance.</p>
+</section>
+
+<section id="run" hidden aria-live="polite">
+  <div class="meta">
+    <div>Round<b id="mRound">1/6</b></div>
+    <div class="r">Cycle<b id="mCycle">1/2</b></div>
+  </div>
+  <div class="center">
+    <div id="phaseName">Préparer</div>
+    <div id="count">5</div>
+    <div id="next"></div>
+  </div>
+  <div class="bar"><i id="barFill"></i></div>
+  <div class="meta" style="margin-bottom:18px">
+    <div>Écoulé<b id="mElapsed">0:00</b></div>
+    <div class="r">Restant<b id="mLeft">3:35</b></div>
+  </div>
+  <div class="btns">
+    <button class="rb" id="bStop" aria-label="Arrêter">
+      <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+    </button>
+    <button class="rb big" id="bPause" aria-label="Pause">
+      <svg viewBox="0 0 24 24" id="icoPause"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      <svg viewBox="0 0 24 24" id="icoPlay" hidden><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+    </button>
+    <button class="rb" id="bSkip" aria-label="Passer l’intervalle">
+      <svg viewBox="0 0 24 24"><path d="M5 6.5v11a1 1 0 0 0 1.6.8l7.3-5.5a1 1 0 0 0 0-1.6L6.6 5.7A1 1 0 0 0 5 6.5z"/><rect x="16" y="5" width="3" height="14" rx="1"/></svg>
+    </button>
+  </div>
+</section>
+
+<section id="done" hidden style="position:fixed;inset:0;display:flex;flex-direction:column;background:var(--work);color:var(--ink);padding-top:calc(env(safe-area-inset-top,0px) + 16px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))">
+  <div class="center">
+    <div id="phaseName2" style="font-family:var(--display);font-weight:700;font-size:3.4rem;text-transform:uppercase;letter-spacing:.04em">Terminé</div>
+    <div id="doneTime">3:35</div>
+    <div style="font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;opacity:.75">Bravo, séance complète</div>
+  </div>
+  <button class="go" id="bBack" style="background:var(--ink);color:var(--fg)">Retour</button>
+</section>
+
+<script>
+(function () {
+  const COLORS = { prep: 'var(--prep)', work: 'var(--work)', rest: 'var(--rest)', cycleRest: 'var(--cycle)' };
+  const NAMES = { prep: 'Préparer', work: 'Exercice', rest: 'Repos', cycleRest: 'Récup' };
+  const SAY = { prep: 'Prêt', work: 'Exercice', rest: 'Repos', cycleRest: 'Récupération' };
+
+  const FIELDS = [
+    { k: 'prep',      name: 'Préparer',  sub: 'Compte à rebours avant de commencer', color: 'var(--prep)',  time: true, min: 0, max: 600 },
+    { k: 'work',      name: 'Exercice',  sub: 'Faire des exercices pendant',         color: 'var(--work)',  time: true, min: 1, max: 3600 },
+    { k: 'rest',      name: 'Repos',     sub: 'Se reposer pendant',                  color: 'var(--rest)',  time: true, min: 0, max: 3600 },
+    { k: 'rounds',    name: 'Rounds',    sub: 'Un round = un exercice + repos',      color: 'var(--round)', time: false, min: 1, max: 99 },
+    { k: 'cycles',    name: 'Cycles',    sub: 'Un cycle = {r} rounds',               color: 'var(--cycle)', time: false, min: 1, max: 30 },
+    { k: 'cycleRest', name: 'Repos entre les cycles', sub: 'Intervalle de récupération', color: 'var(--cycle)', time: true, min: 0, max: 3600 },
+  ];
+  const DEFAULTS = { prep: 5, work: 10, rest: 7, rounds: 6, cycles: 2, cycleRest: 20, sound: true, voice: false };
+  const KEY = 'tabata-settings-v1';
+
+  let S = Object.assign({}, DEFAULTS);
+  try { const saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) S = Object.assign(S, saved); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (s) => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60), r = s % 60; return m + ':' + String(r).padStart(2, '0'); };
+  const fmtVal = (f, v) => f.time ? (v < 60 ? ':' + String(v).padStart(2, '0') : fmt(v)) : String(v);
+
+  /* ---------- Setup list ---------- */
+  const list = $('list');
+  FIELDS.forEach((f) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML =
+      '<div class="label"><div class="name"><span class="dot" style="background:' + f.color + '"></span><span>' + f.name + '</span></div>' +
+      '<div class="sub" data-sub="' + f.k + '"></div></div>' +
+      '<div class="ctrl"><button class="step" data-k="' + f.k + '" data-d="-1" aria-label="Moins ' + f.name + '">−</button>' +
+      '<div class="val" id="v-' + f.k + '"></div>' +
+      '<button class="step" data-k="' + f.k + '" data-d="1" aria-label="Plus ' + f.name + '">+</button></div>';
+    list.appendChild(row);
+  });
+
+  function stepSize(f, v, d) {
+    if (!f.time) return 1;
+    const base = d > 0 ? v : v - 1;
+    return base >= 60 ? 5 : 1;
+  }
+  function bump(k, d) {
+    const f = FIELDS.find((x) => x.k === k);
+    let v = S[k] + d * stepSize(f, S[k], d);
+    v = Math.min(f.max, Math.max(f.min, v));
+    if (v !== S[k]) { S[k] = v; save(); renderSetup(); }
+  }
+
+  // tap + hold-to-repeat
+  let holdT = null, repT = null;
+  function stopHold() { clearTimeout(holdT); clearInterval(repT); holdT = repT = null; }
+  list.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.step'); if (!b) return;
+    e.preventDefault();
+    const k = b.dataset.k, d = +b.dataset.d;
+    bump(k, d);
+    holdT = setTimeout(() => { repT = setInterval(() => bump(k, d), 80); }, 420);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => list.addEventListener(ev, stopHold));
+  list.addEventListener('keydown', (e) => {
+    const b = e.target.closest('.step');
+    if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); bump(b.dataset.k, +b.dataset.d); }
+  });
+
+  function buildPhases() {
+    const P = [];
+    if (S.prep > 0) P.push({ t: 'prep', d: S.prep, r: 1, c: 1 });
+    for (let c = 1; c <= S.cycles; c++) {
+      for (let r = 1; r <= S.rounds; r++) {
+        P.push({ t: 'work', d: S.work, r, c });
+        const lastRound = r === S.rounds;
+        if (!lastRound && S.rest > 0) P.push({ t: 'rest', d: S.rest, r, c });
+      }
+      if (c < S.cycles && S.cycleRest > 0) P.push({ t: 'cycleRest', d: S.cycleRest, r: S.rounds, c });
+    }
+    return P;
+  }
+  const totalOf = (P) => P.reduce((a, p) => a + p.d, 0);
+
+  function renderSetup() {
+    FIELDS.forEach((f) => { $('v-' + f.k).textContent = fmtVal(f, S[f.k]); });
+    document.querySelectorAll('[data-sub]').forEach((el) => {
+      const f = FIELDS.find((x) => x.k === el.dataset.sub);
+      el.textContent = f.sub.replace('{r}', S.rounds);
+    });
+    $('total').textContent = fmt(totalOf(buildPhases()));
+    $('optSound').setAttribute('aria-pressed', S.sound);
+    $('optVoice').setAttribute('aria-pressed', S.voice);
+  }
+  $('optSound').onclick = () => { S.sound = !S.sound; save(); renderSetup(); };
+  $('optVoice').onclick = () => { S.voice = !S.voice; save(); renderSetup(); if (S.voice) speak('Voix activée'); };
+  renderSetup();
+
+  /* ---------- Audio ---------- */
+  let ctx = null;
+  function unlockAudio() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    try {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
+      s.buffer = b; s.connect(ctx.destination); s.start(0);
+    } catch (e) { ctx = null; }
+  }
+  function beep(freq, dur, vol) {
+    if (!S.sound || !ctx) return;
+    try {
+      const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.25, t + 0.01);
+      g.gain.setValueAtTime(vol || 0.25, t + dur - 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    } catch (e) {}
+  }
+  function speak(txt) {
+    if (!S.voice || !('speechSynthesis' in window)) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'fr-FR'; u.rate = 1.05;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function buzz(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
+  /* ---------- Wake lock ---------- */
+  let lock = null;
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator) { lock = await navigator.wakeLock.request('screen'); } } catch (e) { lock = null; }
+  }
+  function releaseAwake() { try { lock && lock.release(); } catch (e) {} lock = null; }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && running && !paused) keepAwake(); });
+
+  /* ---------- Runner ---------- */
+  let P = [], idx = 0, phaseEnd = 0, paused = false, pauseLeft = 0, running = false, timer = null, lastSec = -1, total = 0, doneBefore = 0;
+
+  function show(id) { ['setup', 'run', 'done'].forEach((x) => { $(x).hidden = x !== id; }); }
+
+  function enterPhase(i, startAt) {
+    idx = i;
+    const p = P[i];
+    phaseEnd = startAt + p.d * 1000;
+    doneBefore = P.slice(0, i).reduce((a, q) => a + q.d, 0);
+    lastSec = -1;
+    $('run').style.setProperty('--phase', COLORS[p.t]);
+    $('phaseName').textContent = NAMES[p.t];
+    $('mRound').textContent = p.r + '/' + S.rounds;
+    $('mCycle').textContent = p.c + '/' + S.cycles;
+    const n = P[i + 1];
+    $('next').textContent = n ? 'Ensuite : ' + NAMES[n.t] + ' ' + fmtVal({ time: true }, n.d) : 'Dernier intervalle';
+    if (i > 0 || p.t !== 'prep') {
+      beep(p.t === 'work' ? 1320 : 660, 0.45, 0.3);
+      buzz(p.t === 'work' ? [200, 80, 200] : 300);
+    }
+    speak(p.t === 'work' ? 'Exercice' + (p.r === 1 && p.c > 1 ? ', cycle ' + p.c : '') : SAY[p.t]);
+  }
+
+  function tick() {
+    if (!running || paused) return;
+    const now = performance.now();
+    while (now >= phaseEnd) {
+      if (idx + 1 >= P.length) { finish(); return; }
+      enterPhase(idx + 1, phaseEnd);
+    }
+    const left = (phaseEnd - now) / 1000;
+    const sec = Math.ceil(left);
+    if (sec !== lastSec) {
+      lastSec = sec;
+      $('count').textContent = sec >= 60 ? fmt(sec) : String(sec);
+      if (sec <= 3 && sec >= 1) beep(880, 0.12, 0.22);
+    }
+    const p = P[idx];
+    const elapsed = doneBefore + (p.d - left);
+    $('barFill').style.width = (Math.min(1, elapsed / total) * 100).toFixed(2) + '%';
+    $('mElapsed').textContent = fmt(Math.floor(elapsed));
+    $('mLeft').textContent = fmt(Math.ceil(total - elapsed));
+  }
+
+  function start() {
+    unlockAudio();
+    P = buildPhases();
+    if (!P.length) return;
+    total = totalOf(P);
+    running = true; paused = false;
+    setPauseIcon();
+    $('run').classList.remove('paused');
+    show('run');
+    keepAwake();
+    enterPhase(0, performance.now());
+    clearInterval(timer);
+    timer = setInterval(tick, 50);
+    tick();
+  }
+  function setPauseIcon() {
+    $('icoPause').hidden = paused; $('icoPlay').hidden = !paused;
+    $('bPause').setAttribute('aria-label', paused ? 'Reprendre' : 'Pause');
+  }
+  function togglePause() {
+    if (!running) return;
+    if (!paused) {
+      paused = true; pauseLeft = phaseEnd - performance.now();
+      $('run').classList.add('paused'); $('phaseName').textContent = 'Pause';
+      releaseAwake();
+    } else {
+      paused = false; phaseEnd = performance.now() + pauseLeft;
+      $('run').classList.remove('paused'); $('phaseName').textContent = NAMES[P[idx].t];
+      keepAwake(); unlockAudio();
+    }
+    setPauseIcon();
+  }
+  function skip() {
+    if (!running) return;
+    if (idx + 1 >= P.length) { finish(); return; }
+    if (paused) { paused = false; $('run').classList.remove('paused'); setPauseIcon(); keepAwake(); }
+    enterPhase(idx + 1, performance.now());
+    tick();
+  }
+  function stop() {
+    running = false; clearInterval(timer); releaseAwake();
+    try { speechSynthesis.cancel(); } catch (e) {}
+    show('setup');
+  }
+  function finish() {
+    running = false; clearInterval(timer); releaseAwake();
+    beep(1320, 0.25, 0.3); setTimeout(() => beep(1320, 0.25, 0.3), 320); setTimeout(() => beep(1760, 0.6, 0.3), 640);
+    buzz([300, 100, 300, 100, 500]);
+    speak('Terminé, bravo');
+    $('doneTime').textContent = fmt(total);
+    show('done');
+  }
+
+  $('start').onclick = start;
+  $('bPause').onclick = togglePause;
+  $('bSkip').onclick = skip;
+  $('bStop').onclick = stop;
+  $('bBack').onclick = () => show('setup');
+})();
+</script>
+</body>
+</html>
