@@ -106,6 +106,53 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Exercices enregistrés */
+.presets { display: flex; flex-direction: column; gap: 10px; }
+.phead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.phead h2 { margin: 0; font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: 1rem; color: var(--muted); }
+.link { font-family: var(--display); text-transform: uppercase; letter-spacing: .06em; font-size: 1rem; color: var(--work); padding: 4px 0; }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding-inline: max(16px, env(safe-area-inset-left, 0px)); padding-block: 2px; scroll-snap-type: x proximity; }
+.chips::-webkit-scrollbar { display: none; }
+.pc {
+  flex: none; scroll-snap-align: start;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 2px solid var(--line);
+  text-align: left; max-width: 70vw;
+}
+.pc .pn { font-family: var(--display); font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: .02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.pc .ps { font-size: .78rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pc.on { border-color: var(--work); }
+.pc.add { border-style: dashed; justify-content: center; color: var(--muted); }
+.pc.add .pn { color: var(--fg); }
+.editing .pc:not(.add) { border-color: var(--muted); }
+.editing .pc:not(.add) .ps::before { content: "Toucher pour modifier · "; }
+.changed { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--surface); font-size: .9rem; color: var(--muted); }
+.changed b { color: var(--fg); font-weight: 600; }
+.empty { color: var(--muted); font-size: .9rem; line-height: 1.4; margin: 0; }
+
+/* Feuille (nommer / modifier) */
+.sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+.sheet {
+  width: 100%; max-width: 560px; background: var(--surface); border-radius: 20px 20px 0 0;
+  padding-top: 20px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+.sheet h3 { margin: 0; font-family: var(--display); font-weight: 700; text-transform: uppercase; font-size: 1.6rem; letter-spacing: .03em; }
+.sheet .sum { color: var(--muted); font-size: .9rem; margin: -6px 0 0; }
+.sheet input {
+  font: inherit; font-size: 1.1rem; min-height: 50px; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg); width: 100%;
+  -webkit-user-select: text; user-select: text;
+}
+.sheet input:focus { outline: 2px solid var(--work); outline-offset: 0; }
+.sbtns { display: flex; gap: 10px; }
+.sb { flex: 1; min-height: 50px; border-radius: 999px; font-family: var(--display); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 1.2rem; background: var(--line); }
+.sb.ok { background: var(--work); color: var(--ink); }
+.sb.del { background: none; color: var(--rest); flex: none; padding-inline: 4px; min-height: 40px; font-size: 1rem; align-self: center; }
+.sb:disabled { opacity: .4; }
+#runName { text-align: center; font-family: var(--display); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1.3rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; align-self: center; }
+
 .opts { display: flex; gap: 10px; flex-wrap: wrap; }
 .chip {
   flex: 1 1 0; min-width: 120px;
@@ -178,6 +225,12 @@ h1 {
     <div class="total">Durée totale<b id="total">3:35</b></div>
   </div>
 
+  <div class="presets" id="presets">
+    <div class="phead"><h2>Mes exercices</h2><button class="link" id="editToggle" hidden>Modifier</button></div>
+    <div class="chips" id="chips"></div>
+    <div class="changed" id="changed" hidden><span>Réglages de <b id="changedName"></b> modifiés</span><button class="link" id="updatePreset">Mettre à jour</button></div>
+  </div>
+
   <div class="list" id="list"></div>
 
   <div class="opts">
@@ -186,12 +239,26 @@ h1 {
   </div>
 
   <button class="go" id="start">Démarrer</button>
-  <p class="hint">Réglages gardés sur ce téléphone. Mets le son du téléphone (pas en silencieux) pour entendre les bips. L’écran reste allumé pendant la séance.</p>
+  <p class="hint">Réglages et exercices gardés sur ce téléphone. Mets le son du téléphone (pas en silencieux) pour entendre les bips. L’écran reste allumé pendant la séance.</p>
 </section>
+
+<div class="sheet-bg" id="sheetBg" hidden>
+  <form class="sheet" id="sheet" autocomplete="off">
+    <h3 id="sheetTitle">Enregistrer l’exercice</h3>
+    <p class="sum" id="sheetSum"></p>
+    <input id="sheetName" type="text" maxlength="30" placeholder="Nom, par ex. Pompes" enterkeyhint="done" aria-label="Nom de l’exercice">
+    <div class="sbtns">
+      <button type="button" class="sb" id="sheetCancel">Annuler</button>
+      <button type="submit" class="sb ok" id="sheetOk">Enregistrer</button>
+    </div>
+    <button type="button" class="sb del" id="sheetDel" hidden>Supprimer cet exercice</button>
+  </form>
+</div>
 
 <section id="run" hidden aria-live="polite">
   <div class="meta">
     <div>Round<b id="mRound">1/6</b></div>
+    <span id="runName"></span>
     <div class="r">Cycle<b id="mCycle">1/2</b></div>
   </div>
   <div class="center">
@@ -318,7 +385,110 @@ h1 {
     $('total').textContent = fmt(totalOf(buildPhases()));
     $('optSound').setAttribute('aria-pressed', S.sound);
     $('optVoice').setAttribute('aria-pressed', S.voice);
+    renderPresets();
   }
+
+  /* ---------- Exercices enregistrés ---------- */
+  const PKEY = 'tabata-presets-v1';
+  const CFG = ['prep', 'work', 'rest', 'rounds', 'cycles', 'cycleRest'];
+  let presets = [];
+  try { presets = JSON.parse(localStorage.getItem(PKEY) || '[]') || []; } catch (e) { presets = []; }
+  if (!Array.isArray(presets)) presets = [];
+  let editing = false, sheetMode = null, sheetId = null;
+
+  function savePresets() { try { localStorage.setItem(PKEY, JSON.stringify(presets)); } catch (e) {} }
+  const pick = (o) => CFG.reduce((a, k) => (a[k] = o[k], a), {});
+  const same = (a, b) => CFG.every((k) => a[k] === b[k]);
+  const totalCfg = (c) => c.prep + c.cycles * (c.rounds * c.work + (c.rounds - 1) * c.rest) + (c.cycles - 1) * c.cycleRest;
+  const secs = (v) => v < 60 ? v + 's' : fmt(v);
+  const summary = (c) => secs(c.work) + ' / ' + secs(c.rest) + ' · ' + c.rounds + ' rounds × ' + c.cycles + ' · ' + fmt(totalCfg(c));
+  const activePreset = () => presets.find((p) => p.id === S.active) || null;
+
+  function renderPresets() {
+    const box = $('chips');
+    box.textContent = '';
+    $('presets').classList.toggle('editing', editing);
+    $('editToggle').hidden = presets.length === 0;
+    $('editToggle').textContent = editing ? 'Terminé' : 'Modifier';
+    presets.forEach((p) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pc' + (p.id === S.active && !editing ? ' on' : '');
+      b.dataset.id = p.id;
+      const n = document.createElement('span'); n.className = 'pn'; n.textContent = p.name;
+      const s = document.createElement('span'); s.className = 'ps'; s.textContent = summary(p);
+      b.append(n, s);
+      box.appendChild(b);
+    });
+    if (!editing) {
+      const add = document.createElement('button');
+      add.type = 'button'; add.className = 'pc add'; add.dataset.id = '__add';
+      add.innerHTML = '<span class="pn">+ Enregistrer</span><span class="ps">les réglages ci-dessous</span>';
+      box.appendChild(add);
+    }
+    const a = activePreset();
+    const changed = a && !same(a, S);
+    $('changed').hidden = !changed || editing;
+    if (changed) $('changedName').textContent = '« ' + a.name + ' »';
+  }
+
+  $('chips').addEventListener('click', (e) => {
+    const b = e.target.closest('.pc'); if (!b) return;
+    const id = b.dataset.id;
+    if (id === '__add') { openSheet('new'); return; }
+    const p = presets.find((x) => x.id === id); if (!p) return;
+    if (editing) { openSheet('edit', p); return; }
+    CFG.forEach((k) => { S[k] = p[k]; });
+    S.active = p.id; save(); renderSetup();
+  });
+  $('editToggle').onclick = () => { editing = !editing; renderPresets(); };
+  $('updatePreset').onclick = () => {
+    const a = activePreset(); if (!a) return;
+    Object.assign(a, pick(S)); savePresets(); renderSetup();
+  };
+
+  function openSheet(mode, p) {
+    sheetMode = mode; sheetId = p ? p.id : null;
+    const a = activePreset();
+    $('sheetTitle').textContent = mode === 'new' ? 'Enregistrer l’exercice' : 'Modifier l’exercice';
+    $('sheetSum').textContent = summary(mode === 'new' ? S : p);
+    $('sheetName').value = mode === 'new' ? '' : p.name;
+    $('sheetDel').hidden = mode === 'new';
+    $('sheetDel').textContent = 'Supprimer cet exercice';
+    $('sheetDel').dataset.armed = '';
+    $('sheetBg').hidden = false;
+    setTimeout(() => { try { $('sheetName').focus(); } catch (e) {} }, 50);
+    syncOk();
+  }
+  function closeSheet() { $('sheetBg').hidden = true; try { $('sheetName').blur(); } catch (e) {} }
+  function syncOk() { $('sheetOk').disabled = !$('sheetName').value.trim(); }
+  $('sheetName').addEventListener('input', syncOk);
+  $('sheetCancel').onclick = closeSheet;
+  $('sheetBg').addEventListener('click', (e) => { if (e.target === $('sheetBg')) closeSheet(); });
+  $('sheet').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('sheetName').value.trim(); if (!name) return;
+    if (sheetMode === 'new') {
+      const twin = presets.find((x) => x.name.toLowerCase() === name.toLowerCase());
+      if (twin) { Object.assign(twin, pick(S)); S.active = twin.id; }
+      else {
+        const p = Object.assign({ id: 'p' + Date.now().toString(36), name }, pick(S));
+        presets.push(p); S.active = p.id;
+      }
+      save();
+    } else {
+      const p = presets.find((x) => x.id === sheetId); if (p) p.name = name;
+    }
+    savePresets(); closeSheet(); renderSetup();
+  });
+  $('sheetDel').onclick = () => {
+    const btn = $('sheetDel');
+    if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Toucher encore pour supprimer'; return; }
+    presets = presets.filter((x) => x.id !== sheetId);
+    if (S.active === sheetId) { S.active = null; save(); }
+    if (!presets.length) editing = false;
+    savePresets(); closeSheet(); renderSetup();
+  };
   $('optSound').onclick = () => { S.sound = !S.sound; save(); renderSetup(); };
   $('optVoice').onclick = () => { S.voice = !S.voice; save(); renderSetup(); if (S.voice) speak('Voix activée'); };
   renderSetup();
@@ -421,6 +591,8 @@ h1 {
     $('run').classList.remove('paused');
     show('run');
     keepAwake();
+    const ap = activePreset();
+    $('runName').textContent = ap && same(ap, S) ? ap.name : '';
     enterPhase(0, performance.now());
     clearInterval(timer);
     timer = setInterval(tick, 50);
